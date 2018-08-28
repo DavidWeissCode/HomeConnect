@@ -1,0 +1,22 @@
+<table>
+  <tr>
+    <td>
+      HC API Test
+    </td>
+    <td>
+      <button onClick="requestAuth()">
+        requestAuth
+      </button>
+    </td>
+    <td>
+      <button onClick="requestToken()">
+        requestToken
+      </button>
+    </td>
+    <td>
+      <button onClick="getHaids()">
+        getHaids
+      </button>
+    </td>
+  </tr>
+</table>

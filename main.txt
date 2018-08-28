@@ -1,0 +1,93 @@
+// @author David Weiss
+// @github davidweisscode
+// @date 13.08.2018
+
+const CLIENT_ID = "TODO";
+const CLIENT_SECRET = "TODO";
+const REDIRECT_URI = "https://www.home-connect.com/global/";
+const OAUTH_URL = "https://api.home-connect.com/security/oauth";
+const API_URL = "https://api.home-connect.com/api/homeappliances";
+
+function requestAuth() {
+	let AUTH_URL = OAUTH_URL + "/authorize" + "?" +
+  	"client_id=" + CLIENT_ID + "&" + 
+    "response_type=" + "code" + "&" +
+    "redirect_uri=" + REDIRECT_URI + "&"/* +
+    "scope=" + scope + "&" +
+    "state=" + state*/;
+  console.log("Start fetch", AUTH_URL);
+	fetch(AUTH_URL, {
+  	method: "GET",
+  	headers: {
+    	"Content-Type": "application/json",
+    }
+	}).then(function(response) {
+  	console.log(response);
+    console.log(response.url);
+    // window.open() only works when triggered by direct user interaction. Otherwise blocked.
+    window.alert("Your response URL is:\n\n" + response.url);
+	}, function(error) {
+		console.log(error);
+	})
+}
+
+function requestToken() {
+	// Copy and paste authentication code from redirect URL
+	let myCode = "TODO";
+	let TOKEN_URL = OAUTH_URL + "/token";
+  let requestTokenData = {
+  	'client_id': CLIENT_ID,
+    'client_secret': CLIENT_SECRET,
+    'redirect_uri': REDIRECT_URI,
+    'grant_type': 'authorization_code',
+    'code': myCode
+  };
+  
+  var formBody = [];
+  for (var property in requestTokenData) {
+    var encodedKey = encodeURIComponent(property);
+    var encodedValue = encodeURIComponent(requestTokenData[property]);
+    formBody.push(encodedKey + "=" + encodedValue);
+  }
+	formBody = formBody.join("&");
+  console.log("Start fetch", TOKEN_URL);
+	fetch(TOKEN_URL, {
+  	method: "POST",
+    //mode: "cors",
+  	headers: {
+    	"Content-Type": "application/x-www-form-urlencoded"
+    },
+    body: formBody
+	}).then(function(response) {
+  	console.log(response);
+    // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+    response.json().then(function(data) {
+    	console.log(data);
+      // id_token [mandatory]: same as access token
+      // access_token [mandatory]: token to be used in subsequent Home Connect API requests
+      // expires_in[mandatory]: expiration time of the access token and id_token in seconds, default: 86400
+      // scope[mandatory]: permissions requested by the client application separated by space
+      // refresh_token [mandatory]: refresh token (expires if it wasn't used within 2 months)
+      // token_type [mandatory]: type of the token, currently always Bearer
+    });
+	}, function(error) {
+		console.log(error);
+	})
+}
+
+function getHaids() {
+	let GETHAID_URL = API_URL + "?" + "access_token" + "=" + "TODO";
+	console.log("Start fetch", GETHAID_URL);
+  // Scope? Scope Button in Swagger UI not working ...?!
+	fetch(GETHAID_URL, {
+  	method: "GET",
+  	headers: { // Add Authorization header ?! see article
+    	"Content-Type": "application/json",
+      "Accept": "application/vnd.bsh.sdk.v1+json"
+    }
+	}).then(function(response) {
+  	console.log(response);
+	}, function(error) {
+		console.log(error);
+	})
+}
