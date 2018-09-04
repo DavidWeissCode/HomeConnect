@@ -8,16 +8,17 @@ const REDIRECT_URI = "https://www.home-connect.com/global/";
 const OAUTH_URL = "https://api.home-connect.com/security/oauth";
 const API_URL = "https://api.home-connect.com/api/homeappliances";
 
+const HAID_CM = "TODO";
+
 const AUTH_CODE = "TODO";
 const TOKEN = "TODO";
-
-const HAID_CM = "BOSCH-CTL636ES6-68A40E100876";
 
 function requestAuth() {
 	let AUTH_URL = OAUTH_URL + "/authorize" + "?" +
   	"client_id=" + CLIENT_ID + "&" + 
     "response_type=" + "code" + "&" +
-    "redirect_uri=" + REDIRECT_URI + "&";
+    "redirect_uri=" + REDIRECT_URI + "&" + 
+    "scope=" + "IdentifyAppliance%20Settings%20CoffeeMaker";
 	fetch(AUTH_URL, {
   	method: "GET",
   	headers: {
@@ -86,37 +87,55 @@ function getHaids() {
 	})
 }
 
+function getCoffeemakerStatus() {
+	fetch(API_URL + "/" + HAID_CM + "/settings", {
+  	method: "GET",
+  	headers: {
+      "Accept": "application/vnd.bsh.sdk.v1+json",
+      "Authorization": "Bearer " + TOKEN
+    }
+	}).then(function(response) {
+    response.json().then(
+    	data => console.log(data)
+    );
+	}, function(error) {
+		console.log(error);
+	})
+}
+
+function startCoffeemaker() {
+	fetch(API_URL + "/" + HAID_CM + "/settings/BSH.Common.Setting.PowerState", {
+  	method: "PUT",
+  	headers: {
+    	"Content-Type": "application/vnd.bsh.sdk.v1+json",
+      //"Accept": "text/plain", // remove?
+      "Authorization": "Bearer " + TOKEN
+    },
+    body: {
+      "data": {
+    		"key": "BSH.Common.Setting.PowerState",
+    		"value": "BSH.Common.EnumType.PowerState.On"
+  		}
+    }
+	}).then(function(response) {
+    console.log("My response", response);
+    response.json().then(function(data) {
+    	console.log(data);
+    });
+	}, function(error) {
+		console.log(error);
+	})
+}
+
 function getEspresso() {
 	let ESPRESSO_URL = API_URL + "/BOSCH-CTL636ES6-68A40E100876/programs/active";
-  let espressoData = {
-        "key":"ConsumerProducts.CoffeeMaker.Program.Beverage.Espresso",
-        "options":[
-            {
-                "key":"ConsumerProducts.CoffeeMaker.Option.BeanAmount",
-                "value":"ConsumerProducts.CoffeeMaker.EnumType.BeanAmount.VeryMild"
-            },
-            {
-                "key":"ConsumerProducts.CoffeeMaker.Option.FillQuantity",
-                "value":35,
-                "unit":"ml"
-            }
-        ]
-  };
-  var formBody = [];
-  for (var property in espressoData) {
-    var encodedKey = encodeURIComponent(property);
-    var encodedValue = encodeURIComponent(espressoData[property]);
-    formBody.push(encodedKey + "=" + encodedValue);
-  }
-	formBody = formBody.join("&");
 	fetch(ESPRESSO_URL, {
   	method: "PUT",
   	headers: {
     	"Content-Type": "application/vnd.bsh.sdk.v1+json",
-      "Accept": "text/plain",
+      "Accept": "application/vnd.bsh.sdk.v1+json", // text/plain // remove?
       "Authorization": "Bearer " + TOKEN
     },
-    // https://stackoverflow.com/questions/29775797/fetch-post-json-data
     body: {
 
       "data":{
@@ -133,8 +152,7 @@ function getEspresso() {
               }
           ]
       }
-
-    } //formBody
+    }
 	}).then(function(response) {
     console.log("My response", response);
     response.json().then(function(data) {
@@ -144,49 +162,3 @@ function getEspresso() {
 		console.log(error);
 	})
 }
-
-/* Turn on CM
-
-curl -X PUT --header 'Content-Type: application/vnd.bsh.sdk.v1+json' --header 'Accept: text/plain' --header 'Authorization: Bearer TODO' -d '{
-  "data": {
-    "key": "BSH.Common.Setting.PowerState",
-    "value": "BSH.Common.EnumType.PowerState.On"
-  }
-}' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/settings/BSH.Common.Setting.PowerState'
-
-*/
-
-/* Get selected program
-
-curl -X GET --header 'Accept: application/vnd.bsh.sdk.v1+json' --header 'Authorization: Bearer TODO' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/programs/selected'
-
-
-*/
-
-/* Get status of home appliance
-
-curl -X GET --header 'Accept: application/vnd.bsh.sdk.v1+json' --header 'Authorization: Bearer TODO' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/status'
-
-
-*/
-
-/* Start program
-
-curl -X PUT --header 'Content-Type: application/vnd.bsh.sdk.v1+json' --header 'Accept: text/plain' --header 'Authorization: Bearer TODO' -d '{
-    "data":{
-        "key":"ConsumerProducts.CoffeeMaker.Program.Beverage.Espresso",
-        "options":[
-            {
-                "key":"ConsumerProducts.CoffeeMaker.Option.BeanAmount",
-                "value":"ConsumerProducts.CoffeeMaker.EnumType.BeanAmount.VeryMild"
-            },
-            {
-                "key":"ConsumerProducts.CoffeeMaker.Option.FillQuantity",
-                "value":35,
-                "unit":"ml"
-            }
-        ]
-    }
-}' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/programs/active'
-
-*/
