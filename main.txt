@@ -8,23 +8,24 @@ const REDIRECT_URI = "https://www.home-connect.com/global/";
 const OAUTH_URL = "https://api.home-connect.com/security/oauth";
 const API_URL = "https://api.home-connect.com/api/homeappliances";
 
+const AUTH_CODE = "TODO";
+const TOKEN = "TODO";
+
+const HAID_CM = "BOSCH-CTL636ES6-68A40E100876";
+
 function requestAuth() {
 	let AUTH_URL = OAUTH_URL + "/authorize" + "?" +
   	"client_id=" + CLIENT_ID + "&" + 
     "response_type=" + "code" + "&" +
-    "redirect_uri=" + REDIRECT_URI + "&"/* +
-    "scope=" + scope + "&" +
-    "state=" + state*/;
-  console.log("Start fetch", AUTH_URL);
+    "redirect_uri=" + REDIRECT_URI + "&";
 	fetch(AUTH_URL, {
   	method: "GET",
   	headers: {
     	"Content-Type": "application/json",
     }
 	}).then(function(response) {
-  	console.log(response);
-    console.log(response.url);
-    // window.open() only works when triggered by direct user interaction. Otherwise blocked.
+  	console.log(response.url);
+    // window.open(response.url) only works when triggered by direct user interaction. Otherwise blocked.
     window.alert("Your response URL is:\n\n" + response.url);
 	}, function(error) {
 		console.log(error);
@@ -32,17 +33,15 @@ function requestAuth() {
 }
 
 function requestToken() {
-	// Copy and paste authentication code from redirect URL
-	let myCode = "TODO";
 	let TOKEN_URL = OAUTH_URL + "/token";
   let requestTokenData = {
   	'client_id': CLIENT_ID,
     'client_secret': CLIENT_SECRET,
     'redirect_uri': REDIRECT_URI,
     'grant_type': 'authorization_code',
-    'code': myCode
+    'code': AUTH_CODE
   };
-  
+  // Using FormData: https://developer.mozilla.org/en-US/docs/Web/API/FormData/Using_FormData_Objects
   var formBody = [];
   for (var property in requestTokenData) {
     var encodedKey = encodeURIComponent(property);
@@ -50,17 +49,13 @@ function requestToken() {
     formBody.push(encodedKey + "=" + encodedValue);
   }
 	formBody = formBody.join("&");
-  console.log("Start fetch", TOKEN_URL);
 	fetch(TOKEN_URL, {
   	method: "POST",
-    //mode: "cors",
   	headers: {
     	"Content-Type": "application/x-www-form-urlencoded"
     },
     body: formBody
 	}).then(function(response) {
-  	console.log(response);
-    // https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
     response.json().then(function(data) {
     	console.log(data);
       // id_token [mandatory]: same as access token
@@ -76,18 +71,122 @@ function requestToken() {
 }
 
 function getHaids() {
-	let GETHAID_URL = API_URL + "?" + "access_token" + "=" + "TODO";
-	console.log("Start fetch", GETHAID_URL);
-  // Scope? Scope Button in Swagger UI not working ...?!
-	fetch(GETHAID_URL, {
+	fetch(API_URL, {
   	method: "GET",
-  	headers: { // Add Authorization header ?! see article
-    	"Content-Type": "application/json",
-      "Accept": "application/vnd.bsh.sdk.v1+json"
+  	headers: {
+      "Accept": "application/vnd.bsh.sdk.v1+json",
+      "Authorization": "Bearer " + TOKEN
     }
 	}).then(function(response) {
-  	console.log(response);
+    response.json().then(
+    	data => console.log(data)
+    );
 	}, function(error) {
 		console.log(error);
 	})
 }
+
+function getEspresso() {
+	let ESPRESSO_URL = API_URL + "/BOSCH-CTL636ES6-68A40E100876/programs/active";
+  let espressoData = {
+        "key":"ConsumerProducts.CoffeeMaker.Program.Beverage.Espresso",
+        "options":[
+            {
+                "key":"ConsumerProducts.CoffeeMaker.Option.BeanAmount",
+                "value":"ConsumerProducts.CoffeeMaker.EnumType.BeanAmount.VeryMild"
+            },
+            {
+                "key":"ConsumerProducts.CoffeeMaker.Option.FillQuantity",
+                "value":35,
+                "unit":"ml"
+            }
+        ]
+  };
+  var formBody = [];
+  for (var property in espressoData) {
+    var encodedKey = encodeURIComponent(property);
+    var encodedValue = encodeURIComponent(espressoData[property]);
+    formBody.push(encodedKey + "=" + encodedValue);
+  }
+	formBody = formBody.join("&");
+	fetch(ESPRESSO_URL, {
+  	method: "PUT",
+  	headers: {
+    	"Content-Type": "application/vnd.bsh.sdk.v1+json",
+      "Accept": "text/plain",
+      "Authorization": "Bearer " + TOKEN
+    },
+    // https://stackoverflow.com/questions/29775797/fetch-post-json-data
+    body: {
+
+      "data":{
+          "key":"ConsumerProducts.CoffeeMaker.Program.Beverage.Espresso",
+          "options":[
+              {
+                  "key":"ConsumerProducts.CoffeeMaker.Option.BeanAmount",
+                  "value":"ConsumerProducts.CoffeeMaker.EnumType.BeanAmount.Mild"
+              },
+              {
+                  "key":"ConsumerProducts.CoffeeMaker.Option.FillQuantity",
+                  "value":45,
+                  "unit":"ml"
+              }
+          ]
+      }
+
+    } //formBody
+	}).then(function(response) {
+    console.log("My response", response);
+    response.json().then(function(data) {
+    	console.log(data);
+    });
+	}, function(error) {
+		console.log(error);
+	})
+}
+
+/* Turn on CM
+
+curl -X PUT --header 'Content-Type: application/vnd.bsh.sdk.v1+json' --header 'Accept: text/plain' --header 'Authorization: Bearer TODO' -d '{
+  "data": {
+    "key": "BSH.Common.Setting.PowerState",
+    "value": "BSH.Common.EnumType.PowerState.On"
+  }
+}' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/settings/BSH.Common.Setting.PowerState'
+
+*/
+
+/* Get selected program
+
+curl -X GET --header 'Accept: application/vnd.bsh.sdk.v1+json' --header 'Authorization: Bearer TODO' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/programs/selected'
+
+
+*/
+
+/* Get status of home appliance
+
+curl -X GET --header 'Accept: application/vnd.bsh.sdk.v1+json' --header 'Authorization: Bearer TODO' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/status'
+
+
+*/
+
+/* Start program
+
+curl -X PUT --header 'Content-Type: application/vnd.bsh.sdk.v1+json' --header 'Accept: text/plain' --header 'Authorization: Bearer TODO' -d '{
+    "data":{
+        "key":"ConsumerProducts.CoffeeMaker.Program.Beverage.Espresso",
+        "options":[
+            {
+                "key":"ConsumerProducts.CoffeeMaker.Option.BeanAmount",
+                "value":"ConsumerProducts.CoffeeMaker.EnumType.BeanAmount.VeryMild"
+            },
+            {
+                "key":"ConsumerProducts.CoffeeMaker.Option.FillQuantity",
+                "value":35,
+                "unit":"ml"
+            }
+        ]
+    }
+}' 'https://api.home-connect.com/api/homeappliances/BOSCH-CTL636ES6-68A40E100876/programs/active'
+
+*/
